@@ -23,7 +23,7 @@ Para este ejercicio usaremos los paquetes de comunidad de PostgreSQL (pgdg), las
 https://www.postgresql.org/download/
 
 ### pgclient
-
+Instalaremos los paquetes de cliente de PostgreSQL, incluyendo la librería `libpq` y la herramienta `pgbench`. 
 ```bash
 sudo apt install -y postgresql-common
 sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
@@ -38,9 +38,21 @@ sudo apt install -y postgresql-client-14 postgresql-contrib=14+238
 > ```bash
 > sudo pg_dropcluster 14 main --stop
 > ```
+
+Para ilustrar la actividad en las bases de datos, usaremos PMM. Todas las instrucciones se detallan en la documentación en linea.
 ```bash
-psql --version
+curl -fsSL https://www.percona.com/get/pmm | sudo /bin/bash
 ```
+> Para acceder al Docker daemon con un usuario diferente de **root** podemos seguir las instrucciones en la documentación de Docker:
+> ```bash
+> sudo groupadd docker
+> sudo usermod -aG docker $USER
+> newgrp docker
+> ```
+> Después podremos ejecutar comandos de Docker con usuarios que no sean root, por ejemplo:
+> ```bash
+> docker ps
+> ```
 
 ### pg14
 ```bash
