@@ -29,13 +29,18 @@ sudo apt install -y postgresql-common
 sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
 sudo apt install -y postgresql-client-14 postgresql-contrib=14+238
 ```
->>    The following NEW packages will be installed:
->>        libllvm15 libsensors-config libsensors5 postgresql-14 postgresql-contrib sysstat
-
-sudo pg_dropcluster 14 main --stop
-
+> La herramienta `pgbench` se instala con el paquete `postgresql-contrib`, en Ubuntu hay un par de puntos a tener en cuenta:
+> 1. Si no se indica una version del paquete `postgresql-contrib` el administrador de paquetes **apt** instalará la última versión disponible; como en este caso usaremos la version 14, por ello se especificó `postgresql-contrib=14+238`. Para consultar las versiones disponibles de un paquete se puede usar el siguiente comando:
+> ```bash
+> sudo apt-cache policy postgresql-contrib
+> ```
+> 2. En Ubuntu, el paquete `postgresql-contrib` depende algunos paquetes más, incluyendo el paquete que contiene el *postgres server* (`postgresql-14`), como resultado se instalará e inicializará un nuevo servidor de PostgreSQL, en este caso no lo necesitamos en la máquina **pgclient**, por lo que lo eliminaremos con el siguiente comando:
+> ```bash
+> sudo pg_dropcluster 14 main --stop
+> ```
+```bash
 psql --version
-
+```
 
 ### pg14
 ```bash
