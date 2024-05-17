@@ -39,22 +39,6 @@ sudo apt install -y postgresql-client-14 postgresql-contrib=14+238
 > sudo pg_dropcluster 14 main --stop
 > ```
 
-Para ilustrar la actividad en las bases de datos, usaremos PMM. Para revisar instrucciones específicas para diferentes plataformas se pueden referir a la [documentación en linea](https://docs.percona.com/percona-monitoring-and-management/quickstart/index.html).
-```bash
-curl -fsSL https://www.percona.com/get/pmm | sudo /bin/bash
-```
-> Para acceder al Docker daemon con un usuario diferente de **root** podemos seguir las instrucciones en la [documentación de Docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user):
-> ```bash
-> sudo groupadd docker
-> sudo usermod -aG docker $USER
-> newgrp docker
-> ```
-> Después podremos ejecutar comandos de Docker con usuarios que no sean root, por ejemplo:
-> ```bash
-> docker ps
-> docker exec pmm-server 'pmm-admin status'
-> ```
-
 ### pg14
 Instalaremos los paquetes del servidor de PostgreSQL version 14, los siguientes comandos instalarán los paquetes e inicializarán un nuevo servicio de PostgreSQL 14. 
 ```bash
@@ -87,7 +71,7 @@ Creamos un usuario para ser dueño de la nueva base de datos llamado `pgbench` y
 sudo -u postgres psql -c "CREATE USER pgbench WITH PASSWORD 'pgbench123'"
 sudo -u postgres createdb pgbench -O pgbench
 ```
-Ajustamos los siguientes parámetros de PostgreSQL y reiniciamos el servicio, esto permitirá la conectividad por las interfaces de red de la máquina servidor y la configuración de la replicación logíca más adelante.
+Ajustamos los siguientes parámetros de PostgreSQL y reiniciamos el servicio, esto permitirá la conectividad por las interfaces de red de la máquina servidor y la configuración de la replicación lógica más adelante.
 ```bash
 sudo -u postgres psql << EOF 
     ALTER SYSTEM SET listen_addresses TO '*';
@@ -121,17 +105,94 @@ pgbench --initialize --scale=30 --host=pg14 --username=pgbench pgbench
 
 ## Simulación de carga de aplicación
 
-Para este ejemplo, la aplicación que generará la carga será el propio [`pgbench`](https://www.gnu.org/software/screen/manual/screen.html) por lo que desde la máquina **pgclient** iniciaremos la carga con el siguiente comando, ejecutalo desde una terminal que se pueda dejar abierta durante el ejercicio o usa alguna herramienta como [`screen`](https://www.gnu.org/software/screen/manual/screen.html) para ejecutarla en segundo plano. 
+Para este ejemplo, la aplicación que generará la carga será el propio `pgbench` por lo que desde la máquina **pgclient** iniciaremos la carga con el siguiente comando, ejecutalo desde una terminal que se pueda dejar abierta durante el ejercicio o usa alguna herramienta como [`screen`](https://www.gnu.org/software/screen/manual/screen.html) para ejecutarla en segundo plano. 
 ```bash
-pgbench --client=20 \   # Se ejecutaran 20 sesiones cliente simultaneas
-        --connect \     # Se iniciará una nueva conexión por cada transacción
-        --jobs=4 \      # Numero de hilos o procesos a nivel de sistema operativo, util si se tienen multiples CPUs
-        --time=3600 \   # La prueba se ejecutará durante una hora o hasta que se cancele con `ctrl+c`
-        --progress=5 \  # La herramienta reportará cada 5 segundos las estadísticas principales
+pgbench --client=20 \
+        --connect \
+        --jobs=4 \
+        --time=3600 \
+        --progress=5 \
         "host=pg14,pg16 target_session_attrs=read-write connect_timeout=20 user=pgbench dbname=pgbench"
 ```
+> --client=20    Se ejecutaran 20 sesiones cliente simultaneas
+> --connect      Se iniciará una nueva conexión por cada transacción
+> --jobs=4       Numero de hilos o procesos a nivel de sistema operativo, util si se tienen multiples CPUs
+> --time=3600    La prueba se ejecutará durante una hora o hasta que se cancele con `ctrl+c`
+> --progress=5   La herramienta reportará cada 5 segundos las estadísticas principales
 > La ultima linea del comando `pgbench` es la cadena de conexión a la base de datos, aquí estamos usando algunas de las características especiales de la librería `libpq` para ajustar como y a donde se deben de conectar las sesiones cliente:
 > - **host=**. Esta opción admite multiples servidores o IPs, los cuales serán intentados en el orden de aparición.
 > - **target_session_attrs=**. Con este parámetro estamos indicando que las sesiones cliente deben establecerse solo en instancias que admiten operaciones de lectura y escritura, en el caso de instancias replica solo admiten operaciones de lectura. 
-> - **connect_timeout=**. Esta opción define en cuantos segundos debe de esperar el cliente antes de marcar como fallida una conexión. En este caso el valor de 20 es muy alto, pero nos ayudará cuando hagamos el cambio a la nueva instancias de PostgreSQL 16.
+> - **connect_timeout=**. Esta opción define cuantos segundos debe de esperar el cliente antes de marcar como fallida una conexión. En este caso el valor de 20 es muy alto, pero nos ayudará cuando hagamos el cambio a la nueva instancias de PostgreSQL 16.
+> 
 > Referencia: https://www.postgresql.org/docs/current/libpq-connect.html
+
+
+## Replicación logica
+Los siguientes pasos crearan una replicación lógica basica entre las instancias PG14 y PG16, de tal manera que todos los cambios de datos que pasan en PG14 se repliquen en PG16, para que eventualmente se puedan "mover" la carga de la aplicación a la nueva instancia.
+
+### pg14
+Creamos un usuario para la replicación lógica, configuramos su contraseña y asigmanos los permisos requeridos para .
+```bash
+sudo -u postgres createuser --no-superuser --replication replicator
+sudo -u postgres psql pgbench << EOF
+    ALTER USER replicator PASSWORD 'replicator123';
+    GRANT pg_read_all_data TO replicator ;
+EOF
+```
+Para este ejemplo modificaremos una tabla de `pgbench` para agregar un mécanismo de identificación de datos, esto ya que esta table en particular no tiene llave primaria. En un ambiente real, esta modificación puede causar una sobrecarga excesiva en el sistema, por lo que debe de analizarse cuidadosamente.
+```bash
+sudo -u postgres psql pgbench -c 'ALTER TABLE public.pgbench_history REPLICA IDENTITY FULL'
+```
+Creamos una [publicación](https://www.postgresql.org/docs/current/logical-replication-publication.html) para todas las tablas en la base de datos `pgbench`.
+```bash
+sudo -u postgres psql pgbench -c 'CREATE PUBLICATION my_pub FOR ALL TABLES'
+```
+
+### pg16
+Creamos un archivo de contraseñas para el usuario **replicator**.
+```bash
+echo '*:5432:*:replicator:replicator123' >> ~/.pgpass
+chmod 0600 ~/.pgpass
+```
+Con la ayuda de las herramientas [pg_dumpall](https://www.postgresql.org/docs/current/app-pg-dumpall.html) y [pg_dump](https://www.postgresql.org/docs/current/app-pgdump.html) copiaremos los usuarios y estructura (sin datos) de todas las tablas desde PG14 a PG16.
+```bash
+pg_dumpall --roles-only --host=pg14 --username=replicator | sudo -u postgres psql
+pg_dump --create --schema-only --no-publications --host=pg14 --username=replicator --dbname=pgbench | sudo -u postgres psql
+```
+Crearemos la [subscripción](https://www.postgresql.org/docs/current/sql-createsubscription.html) con lo que se copiarán los datos desde PG14 y se establecerá la replicación lógica.
+```bash
+sudo -u postgres psql pgbench << EOF
+    CREATE SUBSCRIPTION my_sub CONNECTION 'host=pg14 user=replicator password=replicator123 port=5432 dbname=pgbench' PUBLICATION my_pub
+EOF
+```
+Ahora modificaremos el parámetro [`default_transaction_read_only`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-DEFAULT-TRANSACTION-READ-ONLY) para indicar que por ahora la instancia de PG16 solo admitirá sesiones de lectura, para así evitar que por error el cliente establezca sesiones en esta instancia. 
+```bash
+sudo -u postgres psql pgbench << EOF
+    ALTER SYSTEM SET default_transaction_read_only TO 'off';
+    SELECT pg_reload_conf();
+EOF
+```
+
+## Moviendo carga aplicativa a nuevo PG16
+En este punto la replicación lógica se esta encargando de replicar los datos entre ambas instancias, de PG14 a PG16, y la conexión cliente esta configurada para establecer sesión a cualquiera de las dos instancias siempre y cuando acepten operaciones de lectura y escritura. Para "mover" la carga de la aplicación a la nueva instancia ejecuatremos los siguientes pasos:
+
+### pg16
+```bash
+sudo -u postgres psql pgbench << EOF
+    ALTER SYSTEM SET default_transaction_read_only TO 'off';
+    SELECT pg_reload_conf();
+EOF
+```
+
+### pg14
+```bash
+sudo -u postgres psql pgbench << EOF
+    ALTER SYSTEM SET default_transaction_read_only TO 'on';
+    SELECT pg_reload_conf();
+EOF
+```
+
+
+
+
+
