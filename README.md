@@ -114,11 +114,11 @@ pgbench --client=20 \
         --progress=5 \
         "host=pg14,pg16 target_session_attrs=read-write connect_timeout=20 user=pgbench dbname=pgbench"
 ```
-> --client=20    Se ejecutaran 20 sesiones cliente simultaneas
-> --connect      Se iniciará una nueva conexión por cada transacción
-> --jobs=4       Numero de hilos o procesos a nivel de sistema operativo, util si se tienen multiples CPUs
-> --time=3600    La prueba se ejecutará durante una hora o hasta que se cancele con `ctrl+c`
-> --progress=5   La herramienta reportará cada 5 segundos las estadísticas principales
+> `--client=20`    Se ejecutaran 20 sesiones cliente simultaneas
+> `--connect`      Se iniciará una nueva conexión por cada transacción
+> `--jobs=4`       Numero de hilos o procesos a nivel de sistema operativo, util si se tienen multiples CPUs
+> `--time=3600`    La prueba se ejecutará durante una hora o hasta que se cancele con `ctrl+c`
+> `--progress=5`   La herramienta reportará cada 5 segundos las estadísticas principales
 > La ultima linea del comando `pgbench` es la cadena de conexión a la base de datos, aquí estamos usando algunas de las características especiales de la librería `libpq` para ajustar como y a donde se deben de conectar las sesiones cliente:
 > - **host=**. Esta opción admite multiples servidores o IPs, los cuales serán intentados en el orden de aparición.
 > - **target_session_attrs=**. Con este parámetro estamos indicando que las sesiones cliente deben establecerse solo en instancias que admiten operaciones de lectura y escritura, en el caso de instancias replica solo admiten operaciones de lectura. 
@@ -139,7 +139,7 @@ sudo -u postgres psql pgbench << EOF
     GRANT pg_read_all_data TO replicator ;
 EOF
 ```
-Para este ejemplo modificaremos una tabla de `pgbench` para agregar un mécanismo de identificación de datos, esto ya que esta table en particular no tiene llave primaria. En un ambiente real, esta modificación puede causar una sobrecarga excesiva en el sistema, por lo que debe de analizarse cuidadosamente.
+Para este ejemplo modificaremos una tabla de `pgbench` para agregar un mécanismo de identificación de datos, esto ya que esta tabla en particular no tiene llave primaria. En un ambiente real, esta modificación puede causar una sobrecarga excesiva en el sistema, por lo que debe de analizarse cuidadosamente.
 ```bash
 sudo -u postgres psql pgbench -c 'ALTER TABLE public.pgbench_history REPLICA IDENTITY FULL'
 ```
@@ -174,7 +174,7 @@ EOF
 ```
 
 ## Moviendo carga aplicativa a nuevo PG16
-En este punto la replicación lógica se esta encargando de replicar los datos entre ambas instancias, de PG14 a PG16, y la conexión cliente esta configurada para establecer sesión a cualquiera de las dos instancias siempre y cuando acepten operaciones de lectura y escritura. Para "mover" la carga de la aplicación a la nueva instancia ejecuatremos los siguientes pasos:
+En este punto la replicación lógica se esta encargando de replicar los datos entre ambas instancias, de PG14 a PG16, y la conexión cliente esta configurada para establecer sesión a cualquiera de las dos instancias siempre y cuando acepten operaciones de lectura y escritura. Para "mover" la carga de la aplicación a la nueva instancia ejecutaremos los siguientes pasos:
 
 ### pg16
 ```bash
