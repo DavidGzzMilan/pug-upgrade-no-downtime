@@ -119,6 +119,7 @@ pgbench --client=20 \
 > `--jobs=4`       Numero de hilos o procesos a nivel de sistema operativo, util si se tienen multiples CPUs
 > `--time=3600`    La prueba se ejecutará durante una hora o hasta que se cancele con `ctrl+c`
 > `--progress=5`   La herramienta reportará cada 5 segundos las estadísticas principales
+>
 > La ultima linea del comando `pgbench` es la cadena de conexión a la base de datos, aquí estamos usando algunas de las características especiales de la librería `libpq` para ajustar como y a donde se deben de conectar las sesiones cliente:
 > - **host=**. Esta opción admite multiples servidores o IPs, los cuales serán intentados en el orden de aparición.
 > - **target_session_attrs=**. Con este parámetro estamos indicando que las sesiones cliente deben establecerse solo en instancias que admiten operaciones de lectura y escritura, en el caso de instancias replica solo admiten operaciones de lectura. 
