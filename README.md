@@ -132,7 +132,7 @@ pgbench --client=20 \
 Los siguientes pasos crearán una replicación lógica básica entre las instancias PG14 y PG16, de tal manera que todos los cambios de datos que pasan en PG14 se repliquen en PG16, para que eventualmente se puedan "mover" la carga de la aplicación a la nueva instancia.
 
 ### pg14
-Creamos un usuario para la replicación lógica, configuramos su contraseña y asignamos los permisos requeridos para .
+Creamos un usuario para la replicación lógica, configuramos su contraseña y asignamos los permisos requeridos.
 ```bash
 sudo -u postgres createuser --no-superuser --replication replicator
 sudo -u postgres psql pgbench << EOF
