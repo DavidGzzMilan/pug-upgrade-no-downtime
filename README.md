@@ -81,7 +81,7 @@ sudo systemctl restart postgresql@14-main
 ```
 
 ### pg16
-Para unificar configuraciones y permitir la conectividad remota aplicaremos los mismos ajustes a la instancia de PG 14 y reiniciamos el servicio.
+Para unificar configuraciones y permitir la conectividad remota aplicaremos los mismos ajustes a la instancia de PG 16 y reiniciamos el servicio.
 ```bash
 echo 'host all  all pgclient    scram-sha-256' | sudo -u postgres tee -a /etc/postgresql/16/main/pg_hba.conf
 echo 'host all  all pg14    scram-sha-256' | sudo -u postgres tee -a /etc/postgresql/16/main/pg_hba.conf
