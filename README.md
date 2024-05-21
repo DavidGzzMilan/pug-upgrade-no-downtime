@@ -11,7 +11,7 @@ Durante este ejercicio se realizará una demostración de actualización de la v
 ## Pre-requisitos
 Para este ejercicio se requiere acceso a tres servidores o máquinas virtuales que tengan comunicación de red entre ellos con resolución de nombres (DNS, hosts, etc). Puede utilizarse cualquier variante de sistema operativo Linux pero para este caso particular se usará Ubuntu 22.04. Las  máquinas tendrán los siguientes roles:
 
-- **pgclient**. Esta máquina será utilizada para ejecutar la herramienta [`pgbench`](https://www.postgresql.org/docs/current/pgbench.html) y así simular carga aplicativa. Además se usará para una instancia de [Percona Monitoring and Management (PMM)](https://www.percona.com/software/database-tools/percona-monitoring-and-management) para tener una mejor referencia visual del ejercicio. 
+- **pgclient**. Esta máquina será utilizada para ejecutar la herramienta [`pgbench`](https://www.postgresql.org/docs/current/pgbench.html) y así simular carga aplicativa. 
 - **pg14**. Esta máquina será nuestra instancia principal de PostgreSQL, como el nombre indica, ejecutará la versión 14.
 - **pg16**. Esta máquina será la nueva instancia principal, ejecutará la versión 16 de PostgreSQL y al final del ejercicio soportará la carga de la aplicación.
 
