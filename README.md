@@ -2,23 +2,23 @@
 
  > En este repositorio se encuentran los pasos para reproducir el ejercicio demostrado durante el meetup de apertura del PostgreSQL User Group México el 23 de mayo de 2024.
 
-Durante este ejercicio se realizará una demostración de actualización de la version principal de PostgreSQL de 14 a 16 "sin" downtime para la aplicación. Para ello se utilizarán las siguientes características incluidas en los paquetes base de PostgreSQL:
+Durante este ejercicio se realizará una demostración de actualización de la versión principal de PostgreSQL de 14 a 16 "sin" downtime para la aplicación. Para ello se utilizarán las siguientes características incluidas en los paquetes base de PostgreSQL:
 
-- Replicación lógica entre diferentes versions de PostgreSQL (14 -> 16).
-- Características agregadas (`target_session_attrs`) a las ultimas versiones de librería cliente `libpq` ([comenzando en version 14](https://www.postgresql.org/docs/release/14.0/)).
+- Replicación lógica entre diferentes versiones de PostgreSQL (14 -> 16).
+- Características agregadas (`target_session_attrs`) a las últimas versiones de librería cliente `libpq` ([comenzando en version 14](https://www.postgresql.org/docs/release/14.0/)).
 
 
 ## Pre-requisitos
-Para este ejercicio se requiere acces a tres servidores o maquinas virtuales que tengan comunicación de red entre ellos con resolución de nombres (DNS, hosts, etc). Puede utilizarse cualquier variante de sistema operativo Linux pero para este caso particular se usará Ubuntu 22.04. Las  máquinas tendran los siguientes roles:
+Para este ejercicio se requiere acceso a tres servidores o máquinas virtuales que tengan comunicación de red entre ellos con resolución de nombres (DNS, hosts, etc). Puede utilizarse cualquier variante de sistema operativo Linux pero para este caso particular se usará Ubuntu 22.04. Las  máquinas tendrán los siguientes roles:
 
 - **pgclient**. Esta máquina será utilizada para ejecutar la herramienta [`pgbench`](https://www.postgresql.org/docs/current/pgbench.html) y así simular carga aplicativa. Además se usará para una instancia de [Percona Monitoring and Management (PMM)](https://www.percona.com/software/database-tools/percona-monitoring-and-management) para tener una mejor referencia visual del ejercicio. 
-- **pg14**. Esta máquina será nuestra instancia principal de PostgreSQL, como el nombre indica ejecutará la version 14.
-- **pg16**. Esta máquina será la nueva instancia principal, ejecutará la versión 16 de PostgreSQL y al final del ejercicio está soportará la carga de la aplicación.
+- **pg14**. Esta máquina será nuestra instancia principal de PostgreSQL, como el nombre indica, ejecutará la versión 14.
+- **pg16**. Esta máquina será la nueva instancia principal, ejecutará la versión 16 de PostgreSQL y al final del ejercicio soportará la carga de la aplicación.
 
 
 ## Instalando el software
 
-Para este ejercicio usaremos los paquetes de comunidad de PostgreSQL (pgdg), las instrucciones específicas dependiendo del sistema operativo y versión pueden consultarse en la documentación en linea:
+Para este ejercicio usaremos los paquetes de comunidad de PostgreSQL (pgdg), las instrucciones específicas dependiendo del sistema operativo y versión pueden consultarse en la documentación en línea:
 
 https://www.postgresql.org/download/
 
@@ -30,7 +30,7 @@ sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
 sudo apt install -y postgresql-client-14 postgresql-contrib=14+238
 ```
 > La herramienta `pgbench` se instala con el paquete `postgresql-contrib`, en Ubuntu hay un par de puntos a tener en cuenta:
-> 1. Si no se indica una version del paquete `postgresql-contrib` el administrador de paquetes **apt** instalará la última versión disponible; como en este caso usaremos la version 14, por ello se especificó `postgresql-contrib=14+238`. Para consultar las versiones disponibles de un paquete se puede usar el siguiente comando:
+> 1. Si no se indica una versión del paquete `postgresql-contrib` el administrador de paquetes **apt** instalará la última versión disponible; como en este caso usaremos la versión 14, por ello se especificó `postgresql-contrib=14+238`. Para consultar las versiones disponibles de un paquete se puede usar el siguiente comando:
 > ```bash
 > sudo apt-cache policy postgresql-contrib
 > ```
@@ -40,14 +40,14 @@ sudo apt install -y postgresql-client-14 postgresql-contrib=14+238
 > ```
 
 ### pg14
-Instalaremos los paquetes del servidor de PostgreSQL version 14, los siguientes comandos instalarán los paquetes e inicializarán un nuevo servicio de PostgreSQL 14. 
+Instalaremos los paquetes del servidor de PostgreSQL versión 14, los siguientes comandos instalarán los paquetes e inicializarán un nuevo servicio de PostgreSQL 14. 
 ```bash
 sudo apt install -y postgresql-common
 sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
 sudo apt -y install postgresql-14
 ```
 ### pg16
-Instalaremos los paquetes del servidor de PostgreSQL version 16, los siguientes comandos instalarán los paquetes e inicializarán un nuevo servicio de PostgreSQL 16.     
+Instalaremos los paquetes del servidor de PostgreSQL versión 16, los siguientes comandos instalarán los paquetes e inicializarán un nuevo servicio de PostgreSQL 16.     
 ```bash
 sudo apt install -y postgresql-common
 sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
@@ -56,12 +56,12 @@ sudo apt -y install postgresql-16
 
 ## Configuración inicial
 
-Como se indico originalmente, el objetivo del ejercicio es hacer una actualización/migración de PG14 a PG16 sin afectar la disponibilidad del servicio a la aplicación cliente. Para ello necesitamos la siguiente configuración básica.
+Como se indicó originalmente, el objetivo del ejercicio es hacer una actualización/migración de PG14 a PG16 sin afectar la disponibilidad del servicio a la aplicación cliente. Para ello necesitamos la siguiente configuración básica.
 
 ### pg14
 Haremos los siguientes ajustes a los parámetros de postgres para permitir la replicación lógica, y la conectividad de red desde equipos remotos.
 
-Agregamos las siguientes lineas al archivo `pg_hba.conf` de tal modo que se puedan establecer sesiones remotas desde las otras máquinas.
+Agregamos las siguientes líneas al archivo `pg_hba.conf` de tal modo que se puedan establecer sesiones remotas desde las otras máquinas.
 ```bash
 echo 'host all  all pgclient    scram-sha-256' | sudo -u postgres tee -a /etc/postgresql/14/main/pg_hba.conf
 echo 'host all  all pg16    scram-sha-256' | sudo -u postgres tee -a /etc/postgresql/14/main/pg_hba.conf
@@ -81,7 +81,7 @@ sudo systemctl restart postgresql@14-main
 ```
 
 ### pg16
-Para unificar configuraciones y permitir la conectividad remota aplicaremos los mismos ajustes a las instancia de PG 16 y reiniciamos el servicio.
+Para unificar configuraciones y permitir la conectividad remota aplicaremos los mismos ajustes a la instancia de PG 14 y reiniciamos el servicio.
 ```bash
 echo 'host all  all pgclient    scram-sha-256' | sudo -u postgres tee -a /etc/postgresql/16/main/pg_hba.conf
 echo 'host all  all pg14    scram-sha-256' | sudo -u postgres tee -a /etc/postgresql/16/main/pg_hba.conf
@@ -114,25 +114,25 @@ pgbench --client=20 \
         --progress=5 \
         "host=pg14,pg16 target_session_attrs=read-write connect_timeout=20 user=pgbench dbname=pgbench"
 ```
-> `--client=20`    Se ejecutaran 20 sesiones cliente simultaneas
+> `--client=20`    Se ejecutarán 20 sesiones cliente simultáneas
 > `--connect`      Se iniciará una nueva conexión por cada transacción
-> `--jobs=4`       Numero de hilos o procesos a nivel de sistema operativo, util si se tienen multiples CPUs
+> `--jobs=4`       Número de hilos o procesos a nivel de sistema operativo, útil si se tienen múltiples CPUs
 > `--time=3600`    La prueba se ejecutará durante una hora o hasta que se cancele con `ctrl+c`
 > `--progress=5`   La herramienta reportará cada 5 segundos las estadísticas principales
 >
-> La ultima linea del comando `pgbench` es la cadena de conexión a la base de datos, aquí estamos usando algunas de las características especiales de la librería `libpq` para ajustar como y a donde se deben de conectar las sesiones cliente:
-> - **host=**. Esta opción admite multiples servidores o IPs, los cuales serán intentados en el orden de aparición.
-> - **target_session_attrs=**. Con este parámetro estamos indicando que las sesiones cliente deben establecerse solo en instancias que admiten operaciones de lectura y escritura, en el caso de instancias replica solo admiten operaciones de lectura. 
-> - **connect_timeout=**. Esta opción define cuantos segundos debe de esperar el cliente antes de marcar como fallida una conexión. En este caso el valor de 20 es muy alto, pero nos ayudará cuando hagamos el cambio a la nueva instancias de PostgreSQL 16.
+> La última línea del comando `pgbench` es la cadena de conexión a la base de datos, aquí estamos usando algunas de las características especiales de la librería `libpq` para ajustar cómo y a dónde se deben de conectar las sesiones cliente:
+> - **host=**. Esta opción admite múltiples servidores o IPs, los cuales serán intentados en el orden de aparición.
+> - **target_session_attrs=**. Con este parámetro estamos indicando que las sesiones cliente deben establecerse sólo en instancias que admiten operaciones de lectura y escritura, en el caso de instancias de réplica, estás solo admiten operaciones de lectura. 
+> - **connect_timeout=**. Esta opción define cuántos segundos debe de esperar el cliente antes de marcar como fallida una conexión. En este caso el valor de 20 es muy alto, pero nos ayudará cuando hagamos el cambio a la nueva instancia de PostgreSQL 16.
 > 
 > Referencia: https://www.postgresql.org/docs/current/libpq-connect.html
 
 
-## Replicación logica
-Los siguientes pasos crearan una replicación lógica basica entre las instancias PG14 y PG16, de tal manera que todos los cambios de datos que pasan en PG14 se repliquen en PG16, para que eventualmente se puedan "mover" la carga de la aplicación a la nueva instancia.
+## Replicación lógica
+Los siguientes pasos crearán una replicación lógica básica entre las instancias PG14 y PG16, de tal manera que todos los cambios de datos que pasan en PG14 se repliquen en PG16, para que eventualmente se puedan "mover" la carga de la aplicación a la nueva instancia.
 
 ### pg14
-Creamos un usuario para la replicación lógica, configuramos su contraseña y asigmanos los permisos requeridos para .
+Creamos un usuario para la replicación lógica, configuramos su contraseña y asignamos los permisos requeridos para .
 ```bash
 sudo -u postgres createuser --no-superuser --replication replicator
 sudo -u postgres psql pgbench << EOF
@@ -140,7 +140,7 @@ sudo -u postgres psql pgbench << EOF
     GRANT pg_read_all_data TO replicator ;
 EOF
 ```
-Para este ejemplo modificaremos una tabla de `pgbench` para agregar un mécanismo de identificación de datos, esto ya que esta tabla en particular no tiene llave primaria. En un ambiente real, esta modificación puede causar una sobrecarga excesiva en el sistema, por lo que debe de analizarse cuidadosamente.
+Para este ejemplo modificaremos una tabla de `pgbench` para agregar un mecanismo de identificación de datos, esto ya que esta tabla en particular no tiene llave primaria. En un ambiente real, esta modificación puede causar una sobrecarga excesiva en el sistema, por lo que debe de analizarse cuidadosamente.
 ```bash
 sudo -u postgres psql pgbench -c 'ALTER TABLE public.pgbench_history REPLICA IDENTITY FULL'
 ```
@@ -166,7 +166,7 @@ sudo -u postgres psql pgbench << EOF
     CREATE SUBSCRIPTION my_sub CONNECTION 'host=pg14 user=replicator password=replicator123 port=5432 dbname=pgbench' PUBLICATION my_pub
 EOF
 ```
-Ahora modificaremos el parámetro [`default_transaction_read_only`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-DEFAULT-TRANSACTION-READ-ONLY) para indicar que por ahora la instancia de PG16 solo admitirá sesiones de lectura, para así evitar que por error el cliente establezca sesiones en esta instancia. 
+Ahora modificáremos el parámetro [`default_transaction_read_only`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-DEFAULT-TRANSACTION-READ-ONLY) para indicar que por ahora la instancia de PG16 solo admitirá sesiones de lectura, para así evitar que por error el cliente establezca sesiones en esta instancia. 
 ```bash
 sudo -u postgres psql pgbench << EOF
     ALTER SYSTEM SET default_transaction_read_only TO 'off';
@@ -175,7 +175,7 @@ EOF
 ```
 
 ## Moviendo carga aplicativa a nuevo PG16
-En este punto la replicación lógica se esta encargando de replicar los datos entre ambas instancias, de PG14 a PG16, y la conexión cliente esta configurada para establecer sesión a cualquiera de las dos instancias siempre y cuando acepten operaciones de lectura y escritura. Para "mover" la carga de la aplicación a la nueva instancia ejecutaremos los siguientes pasos:
+En este punto la replicación lógica se está encargando de replicar los datos entre ambas instancias, de PG14 a PG16, y la conexión cliente está configurada para establecer sesión a cualquiera de las dos instancias siempre y cuando acepten operaciones de lectura y escritura. Para "mover" la carga de la aplicación a la nueva instancia ejecutaremos los siguientes pasos:
 
 ### pg16
 ```bash
