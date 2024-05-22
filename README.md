@@ -105,7 +105,7 @@ pgbench --initialize --scale=30 --host=pg14 --username=pgbench pgbench
 
 ## Simulación de carga de aplicación
 
-Para este ejemplo, la aplicación que generará la carga será el propio `pgbench` por lo que desde la máquina **pgclient** iniciaremos la carga con el siguiente comando, ejecutalo desde una terminal que se pueda dejar abierta durante el ejercicio o usa alguna herramienta como [`screen`](https://www.gnu.org/software/screen/manual/screen.html) para ejecutarla en segundo plano. 
+Para este ejemplo, la aplicación que generará la carga será el propio `pgbench` por lo que desde la máquina **pgclient** iniciaremos la carga con el siguiente comando, ejecútalo desde una terminal que se pueda dejar abierta durante el ejercicio o usa alguna herramienta como [`screen`](https://www.gnu.org/software/screen/manual/screen.html) para ejecutarla en segundo plano. 
 ```bash
 pgbench --client=20 \
         --connect \
@@ -174,7 +174,7 @@ sudo -u postgres psql pgbench << EOF
 EOF
 ```
 
-## Moviendo carga aplicativa a nuevo PG16
+## Moviendo la carga aplicativa a nuevo PG16
 En este punto la replicación lógica se está encargando de replicar los datos entre ambas instancias, de PG14 a PG16, y la conexión cliente está configurada para establecer sesión a cualquiera de las dos instancias siempre y cuando acepten operaciones de lectura y escritura. Para "mover" la carga de la aplicación a la nueva instancia ejecutaremos los siguientes pasos:
 
 ### pg16
