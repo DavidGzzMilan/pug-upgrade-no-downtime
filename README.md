@@ -169,7 +169,7 @@ EOF
 Ahora modificáremos el parámetro [`default_transaction_read_only`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-DEFAULT-TRANSACTION-READ-ONLY) para indicar que por ahora la instancia de PG16 solo admitirá sesiones de lectura, para así evitar que por error el cliente establezca sesiones en esta instancia. 
 ```bash
 sudo -u postgres psql pgbench << EOF
-    ALTER SYSTEM SET default_transaction_read_only TO 'off';
+    ALTER SYSTEM SET default_transaction_read_only TO 'on';
     SELECT pg_reload_conf();
 EOF
 ```
